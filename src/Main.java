@@ -1,15 +1,15 @@
+import java.awt.Point;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import com.sun.javafx.geom.Vec2d;
-
 class MapObject {
 	int id;
 	int radius;
-	Vec2d position;
+	Point position;
 
 	public MapObject(int id, int radius, int x, int y) {
 		this.id = id;
@@ -26,7 +26,7 @@ class MapObject {
 
 class Reaper extends MapObject {
 	int mass;
-	Vec2d speed;
+	Point speed;
 	int playerId;
 
 	public Reaper(int id, int radius, int x, int y, int vx, int vy, int mass, int playerId) {
