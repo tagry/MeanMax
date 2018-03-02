@@ -4,7 +4,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
+
+class Constants {
+	static public int INFINITY = 100000000;
+}
 
 class MapObject {
 	int id;
@@ -14,13 +19,20 @@ class MapObject {
 	public MapObject(int id, int radius, int x, int y) {
 		this.id = id;
 		this.radius = radius;
-		this.position.x = x;
-		this.position.y = y;
+		this.position = new Point(x, y);
 	}
 
 	protected void refresh(int x, int y) {
 		this.position.x = x;
 		this.position.y = y;
+	}
+
+	public double distance(MapObject obj) {
+		return this.position.distance(obj.position);
+	}
+
+	public double distance(Point2D obj) {
+		return this.position.distance(obj);
 	}
 }
 
@@ -33,10 +45,7 @@ class Reaper extends MapObject {
 		super(id, radius, x, y);
 		this.mass = mass;
 		this.playerId = playerId;
-		this.position.x = x;
-		this.position.y = y;
-		this.speed.x = vx;
-		this.speed.y = vy;
+		this.speed = new Point(vx, vy);
 	}
 
 	public void refresh(int x, int y, int vx, int vy) {
@@ -60,12 +69,12 @@ class Wrack extends MapObject {
 	}
 }
 
-class Player {
+class GamePlayer {
 	int id;
 	int score;
 	List<Integer> reapers = new ArrayList<>();
 
-	public Player(int id) {
+	public GamePlayer(int id) {
 		this.id = id;
 	}
 
@@ -83,18 +92,23 @@ class Player {
 class Data {
 	public Map<Integer, Reaper> reapers = new HashMap<>();
 	public Map<Integer, Wrack> wracks = new HashMap<>();
-	public List<Player> players = new ArrayList<>();
+	public List<GamePlayer> players = new ArrayList<>();
 
 	public Data() {
-		players.add(new Player(0));
-		players.add(new Player(1));
-		players.add(new Player(2));
+		players.add(new GamePlayer(0));
+		players.add(new GamePlayer(1));
+		players.add(new GamePlayer(2));
 	}
 
 	/*
 	 * *****************************************************************************
 	 * ************************ INIT DATA
 	 */
+	public void clear() {
+		wracks.clear();
+	}
+	
+	
 	public void updatePlayers(int myScore, int enemyScore1, int enemyScore2, int myRage, int enemyRage1,
 			int enemyRage2) {
 		refreshPlayer(0, myScore);
@@ -196,32 +210,90 @@ class BasicStrategy extends Strategy {
 		return moves;
 	}
 
+	/**
+	 * Easy alogo to begin
+	 * 
+	 * @param data
+	 * @param reaperId
+	 * @return
+	 */
 	public Move getReaperMove(Data data, int reaperId) {
-		return null;
+		Reaper reaper = data.reapers.get(reaperId);
+		Point target = getReaperTarget(data, reaperId);
+
+		double distance = reaper.distance(target);
+
+		Move move = new Move();
+		move.destination = target;
+
+		System.err.println(distance);
+		if (distance > 800)
+			move.acc = 300;
+		else if(distance > 500)
+			move.acc = 200;
+		else if(distance > 100)
+			move.acc = 150;
+		else if(distance > 50)
+			move.acc = 100;
+		else if(distance > 20)
+			move.acc = 50;
+		else
+			move.acc = 25;
+
+		return move;
 	}
 
 	public Point getReaperTarget(Data data, int reaperId) {
-		return null;
+		int closestWrack = getClosestWrack(data, reaperId);
+
+		// no wrack
+		if (closestWrack == -1)
+			return data.reapers.get(reaperId).position;
+
+		return data.wracks.get(closestWrack).position;
 	}
-	
+
 	/*
 	 * Algo
 	 * 
 	 */
+
+	/**
+	 * 
+	 * @param data
+	 * @param reaperId
+	 * @return -1 if no wrack
+	 */
 	public int getClosestWrack(Data data, int reaperId) {
-		return -1;
+		Reaper reaper = data.reapers.get(reaperId);
+		double minDistance = Constants.INFINITY;
+		int closestWrack = -1;
+
+		for (Entry<Integer, Wrack> entry : data.wracks.entrySet()) {
+			Wrack currentWrack = entry.getValue();
+			double distance = reaper.distance(currentWrack);
+			if (distance < minDistance) {
+				minDistance = distance;
+				closestWrack = currentWrack.id;
+			}
+		}
+
+		return closestWrack;
 	}
 
 }
 
-class Main {
+class Player {
 
 	public static void main(String args[]) {
 		Scanner in = new Scanner(System.in);
 		Data data = new Data();
+		StrategyContext strategyContext = new StrategyContext();
 
 		// game loop
 		while (true) {
+			data.clear();
+			
 			int myScore = in.nextInt();
 			int enemyScore1 = in.nextInt();
 			int enemyScore2 = in.nextInt();
@@ -248,12 +320,7 @@ class Main {
 				data.updateObject(unitId, unitType, player, mass, radius, x, y, vx, vy, extra, extra2);
 			}
 
-			// Write an action using System.out.println()
-			// To debug: System.err.println("Debug messages...");
-
-			System.out.println("WAIT");
-			System.out.println("WAIT");
-			System.out.println("WAIT");
+			strategyContext.play(data);
 		}
 	}
 }
